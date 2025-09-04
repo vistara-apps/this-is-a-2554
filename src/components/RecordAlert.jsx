@@ -8,15 +8,21 @@ import {
   MapPin,
   AlertTriangle,
   Download,
-  Share
+  Share,
+  Plus
 } from 'lucide-react';
+import TrustedContactsModal from './TrustedContactsModal';
+import { useTrustedContacts } from '../hooks/useTrustedContacts';
 
 const RecordAlert = ({ user }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState('video');
   const [recordingTime, setRecordingTime] = useState(0);
   const [alertSent, setAlertSent] = useState(false);
+  const [showContactsModal, setShowContactsModal] = useState(false);
   const intervalRef = useRef(null);
+  
+  const { contacts, formatPhoneNumber } = useTrustedContacts(user.trustedContacts);
 
   const startRecording = async () => {
     try {
@@ -36,7 +42,7 @@ const RecordAlert = ({ user }) => {
       }, 1000);
 
       // Send alert to trusted contacts
-      if (user.trustedContacts.length > 0) {
+      if (contacts.length > 0) {
         sendAlert();
       }
 
@@ -175,21 +181,41 @@ const RecordAlert = ({ user }) => {
           <h2 className="text-xl font-semibold text-white">Trusted Contacts</h2>
         </div>
         
-        {user.trustedContacts.length > 0 ? (
+        {contacts.length > 0 ? (
           <div className="space-y-2">
-            {user.trustedContacts.map((contact, index) => (
-              <div key={index} className="bg-white/10 rounded-lg p-3">
-                <p className="text-white font-medium">{contact.name}</p>
-                <p className="text-white/70 text-sm">{contact.phone}</p>
+            {contacts.map((contact) => (
+              <div key={contact.id} className="bg-white/10 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-medium">{contact.name}</p>
+                    <p className="text-white/70 text-sm">{formatPhoneNumber(contact.phone)}</p>
+                  </div>
+                  <span className="text-xs bg-white/20 text-white px-2 py-1 rounded">
+                    {contact.relationship}
+                  </span>
+                </div>
               </div>
             ))}
+            <button 
+              onClick={() => setShowContactsModal(true)}
+              className="w-full bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg 
+                       transition-colors flex items-center justify-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Manage Contacts</span>
+            </button>
           </div>
         ) : (
           <div className="text-center py-8">
             <Users className="h-12 w-12 text-white/50 mx-auto mb-4" />
             <p className="text-white/70 mb-4">No trusted contacts added yet</p>
-            <button className="bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-lg">
-              Add Contacts
+            <button 
+              onClick={() => setShowContactsModal(true)}
+              className="bg-accent hover:bg-accent/90 text-white px-4 py-2 rounded-lg 
+                       flex items-center space-x-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Contacts</span>
             </button>
           </div>
         )}
@@ -210,6 +236,13 @@ const RecordAlert = ({ user }) => {
           <li>• Your recording will be automatically saved</li>
         </ul>
       </div>
+
+      {/* Trusted Contacts Modal */}
+      <TrustedContactsModal
+        isOpen={showContactsModal}
+        onClose={() => setShowContactsModal(false)}
+        initialContacts={contacts}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Car, 
   MessageSquare, 
@@ -7,12 +7,16 @@ import {
   ChevronDown,
   Globe,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Search
 } from 'lucide-react';
+import { getRightsData, validateStateData } from '../utils/legalDataHelpers';
 
 const RightsGuides = ({ user }) => {
   const [selectedScenario, setSelectedScenario] = useState('traffic-stop');
   const [selectedLanguage, setSelectedLanguage] = useState(user.preferredLanguage || 'en');
+  const [rightsData, setRightsData] = useState(null);
+  const [stateValidation, setStateValidation] = useState(null);
 
   const scenarios = [
     {
@@ -41,66 +45,28 @@ const RightsGuides = ({ user }) => {
     }
   ];
 
-  const trafficStopGuide = {
-    whatToDo: {
-      en: [
-        'Pull over safely and turn off your engine',
-        'Keep your hands visible on the steering wheel',
-        'Provide license, registration, and insurance when asked',
-        'Remain calm and polite',
-        'You can record the interaction'
-      ],
-      es: [
-        'Deténgase de manera segura y apague el motor',
-        'Mantenga las manos visibles en el volante',
-        'Proporcione licencia, registro y seguro cuando se lo pidan',
-        'Manténgase calmado y cortés',
-        'Puede grabar la interacción'
-      ]
-    },
-    whatNotToSay: {
-      en: [
-        'Don\'t admit guilt or provide unnecessary information',
-        'Don\'t consent to searches without a warrant',
-        'Don\'t argue or become confrontational',
-        'Don\'t reach for anything without announcing it first',
-        'Don\'t lie to officers'
-      ],
-      es: [
-        'No admita culpa ni proporcione información innecesaria',
-        'No consienta búsquedas sin una orden judicial',
-        'No discuta ni se vuelva confrontativo',
-        'No alcance nada sin anunciarlo primero',
-        'No mienta a los oficiales'
-      ]
-    },
-    scripts: {
-      en: [
-        '"Officer, I am exercising my right to remain silent."',
-        '"I do not consent to any searches."',
-        '"Am I free to go?"',
-        '"I would like to speak to an attorney."',
-        '"I am recording this interaction for my safety."'
-      ],
-      es: [
-        '"Oficial, estoy ejerciendo mi derecho a permanecer en silencio."',
-        '"No consiento ningún registro."',
-        '"¿Soy libre de irme?"',
-        '"Me gustaría hablar con un abogado."',
-        '"Estoy grabando esta interacción por mi seguridad."'
-      ]
-    },
-    stateLaws: {
-      [user.selectedState]: [
-        'California Vehicle Code 2800 - Duty to stop for police',
-        'Penal Code 148 - Obstructing or delaying a peace officer',
-        'California Constitution Article 1, Section 13 - Privacy rights',
-        'Vehicle Code 40804 - Officer must state reason for stop'
-      ]
+  // Load rights data when scenario or language changes
+  useEffect(() => {
+    if (user.selectedState) {
+      const validation = validateStateData(user.selectedState);
+      setStateValidation(validation);
+      
+      const data = getRightsData(user.selectedState, selectedScenario, selectedLanguage);
+      setRightsData(data);
     }
-  };
+  }, [user.selectedState, selectedScenario, selectedLanguage]);
 
-  const selectedGuide = trafficStopGuide; // For demo, using traffic stop guide
+  // Use dynamic rights data or fallback to loading state
+  if (!rightsData) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="glass-effect rounded-xl p-6 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Loading rights information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -111,7 +77,15 @@ const RightsGuides = ({ user }) => {
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Know Your Rights
             </h1>
-            <p className="text-white/80">State-specific guides for {user.selectedState}</p>
+            <div className="flex items-center space-x-2">
+              <p className="text-white/80">State-specific guides for {user.selectedState}</p>
+              {stateValidation && !stateValidation.isValid && (
+                <div className="flex items-center space-x-1 text-yellow-400 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Using default data</span>
+                </div>
+              )}
+            </div>
           </div>
           
           {/* Language Toggle */}
@@ -173,7 +147,7 @@ const RightsGuides = ({ user }) => {
             </h2>
           </div>
           <ul className="space-y-3">
-            {selectedGuide.whatToDo[selectedLanguage].map((item, index) => (
+            {rightsData.whatToDo.map((item, index) => (
               <li key={index} className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-success rounded-full mt-2 flex-shrink-0"></div>
                 <span className="text-white/90">{item}</span>
@@ -191,7 +165,7 @@ const RightsGuides = ({ user }) => {
             </h2>
           </div>
           <ul className="space-y-3">
-            {selectedGuide.whatNotToSay[selectedLanguage].map((item, index) => (
+            {rightsData.whatNotToSay.map((item, index) => (
               <li key={index} className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-danger rounded-full mt-2 flex-shrink-0"></div>
                 <span className="text-white/90">{item}</span>
@@ -209,7 +183,7 @@ const RightsGuides = ({ user }) => {
             </h2>
           </div>
           <div className="space-y-3">
-            {selectedGuide.scripts[selectedLanguage].map((script, index) => (
+            {rightsData.scripts.map((script, index) => (
               <div key={index} className="bg-white/10 rounded-lg p-4">
                 <p className="text-white font-medium">{script}</p>
               </div>
@@ -226,7 +200,7 @@ const RightsGuides = ({ user }) => {
             </h2>
           </div>
           <ul className="space-y-3">
-            {selectedGuide.stateLaws[user.selectedState].map((law, index) => (
+            {rightsData.stateLaws.map((law, index) => (
               <li key={index} className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
                 <span className="text-white/90">{law}</span>
